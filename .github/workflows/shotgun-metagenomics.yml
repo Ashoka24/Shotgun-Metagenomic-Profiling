@@ -18,7 +18,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check shell and Python syntax
+        run: |
+          bash -n scripts/run_shotgun.sh
+          python -m py_compile scripts/compare_classifiers.py scripts/summarize_kraken.py
+      - name: Check committed result snapshot
+        run: |
+          test -s results/run_metadata.tsv
+          test -s results/fastp_summary.json
+          test -s results/kraken2.report
+          test -s results/top_taxa.tsv
+          test -s results/centrifuge.report.tsv
+          test -s results/classifier_comparison.tsv
+          test -s results/REPORT.md
+
   analyze:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
