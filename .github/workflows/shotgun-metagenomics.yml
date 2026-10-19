@@ -1,0 +1,47 @@
+name: Shotgun metagenomics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "metadata/**"
+      - "README.md"
+      - ".github/workflows/shotgun-metagenomics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shotgun-metagenomics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install command-line tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fastp kraken2 centrifuge curl
+      - name: Run public sample
+        run: bash scripts/run_shotgun.sh
+      - name: Check expected outputs
+        run: |
+          test -s results/run_metadata.tsv
+          test -s results/fastp_summary.json
+          test -s results/kraken2.report
+          test -s results/top_taxa.tsv
+          test -s results/centrifuge.report.tsv
+          test -s results/classifier_comparison.tsv
+          test -s results/REPORT.md
+      - name: Upload run results
+        uses: actions/upload-artifact@v4
+        with:
+          name: shotgun-metagenomics-results
+          path: results/
+          if-no-files-found: error
+          retention-days: 90
